@@ -250,3 +250,17 @@ echo -e "${GREEN}============================================================${N
 echo -e "${GREEN}  Setup complete!${NC}"
 echo -e "${GREEN}============================================================${NC}"
 echo ""
+
+# Remind user to reload shell if PATH was modified
+SHELL_RC=""
+if [[ "$SHELL" == *"zsh"* ]]; then
+    SHELL_RC="$HOME/.zshrc"
+elif [[ "$SHELL" == *"bash"* ]]; then
+    SHELL_RC="$HOME/.bashrc"
+fi
+
+if [[ -n "$SHELL_RC" ]] && [[ -f "$SHELL_RC" ]]; then
+    warn "To use uv and other tools in new terminals, run:"
+    warn "  source $SHELL_RC"
+fi
+echo ""
