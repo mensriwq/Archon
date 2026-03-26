@@ -16,6 +16,10 @@ Archon is designed and optimized for **project-level formalization** — multi-f
 
 Prerequisites: git, Python 3.10+, curl, elan (Lean toolchain).
 
+**Note:** `archon-loop.sh` runs Claude Code with `--dangerously-skip-permissions`, which Claude Code refuses when running as root on Linux. Two workarounds:
+1. **Use a non-root account** (RECOMMENDED) (e.g. create one with `adduser`) so you are not running with excessive root privileges.
+2. **Set `export IS_SANDBOX=1`** so Claude Code is allowed to start with this high-risk option.
+
 ```bash
 cd /path/where/you/want/Archon
 git clone https://github.com/frenzymath/Archon.git
