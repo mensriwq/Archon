@@ -153,15 +153,15 @@ The dashboard shows iteration progress, parallel prover status, agent logs with 
 <img src="docs/dashboard-logs.jpg" alt="Archon Dashboard — Logs view" width="800">
 </p>
 
-The **Logs** view groups logs by iteration with phase timing (plan → prover → review) and per-prover completion status. Select any log file to see the full agent output with event filtering.
+The **Logs** view groups logs by iteration with phase timing (plan → prover → review) and per-prover completion status.
 
-The **Journal** view tracks proof milestones across sessions — see which theorems were solved, blocked, or retried, with the complete attempt history and review agent recommendations.
+The **Journal** view tracks proof milestones across sessions — see which theorems were solved, blocked, or retried, with condensed reasoning traces that let you follow how the agents approached each proof.
 
 <p align="center">
 <img src="docs/dashboard-journal.jpg" alt="Archon Dashboard — Journal view" width="800">
 </p>
 
-See [`ui/README.md`](ui/README.md) for the full API reference and development guide.
+See [`ui/README.md`](ui/README.md) for more details.
 
 ### Existing lean4-skills and lean-lsp MCP installations
 

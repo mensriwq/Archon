@@ -53,11 +53,11 @@ ui/
 └── client/                         # React SPA (Vite + TypeScript)
     ├── src/
     │   ├── App.tsx                 # Router + connection error banner
-    │   ├── views/
+    │   ├── views/                   # Each view has a co-located .module.css
     │   │   ├── Overview.tsx        # Stage progress, sorry count, tasks
     │   │   ├── LogViewer.tsx       # Iteration sidebar + flat log viewer
     │   │   └── Journal.tsx         # Milestones (per-session) + Targets (cross-session)
-    │   ├── components/
+    │   ├── components/             # Each component has a co-located .module.css
     │   │   ├── LogEntryLine.tsx    # Single log entry (text, tool_call, etc.)
     │   │   ├── MilestoneCard.tsx   # Journal milestone display
     │   │   ├── AttemptCard.tsx     # Proof attempt detail
