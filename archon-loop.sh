@@ -201,7 +201,7 @@ run_claude() {
 
         cd "$PROJECT_PATH"
         claude -p "$prompt" \
-            \
+            --dangerously-skip-permissions --permission-mode bypassPermissions \
             --verbose --output-format stream-json \
             "$@" 2>>"$stderr_dest" | python3 -u -c "
 import sys, json, datetime
@@ -310,7 +310,7 @@ if RAW: RAW.close()
     else
         cd "$PROJECT_PATH"
         claude -p "$prompt" \
-            \
+            --dangerously-skip-permissions --permission-mode bypassPermissions \
             "$@"
     fi
 }
