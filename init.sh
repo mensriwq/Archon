@@ -357,7 +357,8 @@ info "Claude will check the project state and guide you through setup."
 echo ""
 
 cd "$PROJECT_PATH"
-claude "You are in the init stage for project '${PROJECT_NAME}' at ${PROJECT_PATH}. Read ${STATE_DIR}/CLAUDE.md, then read ${STATE_DIR}/prompts/init.md and follow its instructions. Project state files are in ${STATE_DIR}/. Write PROGRESS.md and other state files there, not in the project directory.
+claude --dangerously-skip-permissions --permission-mode bypassPermissions \
+    "You are in the init stage for project '${PROJECT_NAME}' at ${PROJECT_PATH}. Read ${STATE_DIR}/CLAUDE.md, then read ${STATE_DIR}/prompts/init.md and follow its instructions. Project state files are in ${STATE_DIR}/. Write PROGRESS.md and other state files there, not in the project directory.
 
 IMPORTANT: After checking the project state, do NOT write initial objectives on your own. Instead, propose what you think the objectives should be, then ask the user to confirm or adjust before writing them to PROGRESS.md. Wait for the user's reply.
 
