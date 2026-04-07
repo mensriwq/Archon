@@ -1,12 +1,19 @@
 // --- Log types ---
 export interface LogEntry {
   ts: string;
-  event: 'shell' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'session_end';
+  event: 'shell' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'session_end' | 'code_snapshot';
   level?: 'info' | 'warn' | 'error';
   message?: string;
   content?: string;
   tool?: string;
   input?: Record<string, unknown>;
+  // code_snapshot fields
+  step?: number;
+  file?: string;
+  snapshot_path?: string;
+  old_string?: string;
+  new_string?: string;
+  // session_end fields
   total_cost_usd?: number;
   duration_ms?: number;
   num_turns?: number;
@@ -125,4 +132,52 @@ export interface IterationMeta {
   review?: { status: string; durationSecs?: number };
   provers?: Record<string, ProverMeta>;
   proverFiles?: { slug: string; size: number }[];
+}
+
+// --- Snapshot types ---
+export interface SnapshotProverSummary {
+  slug: string;
+  file?: string;
+  stepCount: number;
+  hasBaseline: boolean;
+}
+
+export interface SnapshotFileInfo {
+  name: string;
+  size: number;
+  modified: string;
+}
+
+export interface SnapshotFileContent {
+  name: string;
+  content: string;
+}
+
+export interface DiffResult {
+  step: number;
+  fromFile: string;
+  toFile: string;
+  diff: string;
+  addedLines: number;
+  removedLines: number;
+}
+
+// --- Cross-iteration file snapshot types ---
+export interface FileSnapshotSummary {
+  slug: string;
+  file?: string;
+  iterations: { id: string; stepCount: number; hasBaseline: boolean }[];
+  totalSteps: number;
+}
+
+export interface TimelineEntry {
+  iteration: string;
+  step: number;           // 0 = baseline
+  file: string;           // baseline.lean / step-001.lean
+  ts?: string;            // timestamp from code_snapshot event
+  proverLog?: string;     // slug for log cross-reference
+  sourceFile?: string;    // actual edited file recorded by code_snapshot event
+  diff?: string;
+  addedLines?: number;
+  removedLines?: number;
 }

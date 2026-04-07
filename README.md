@@ -147,7 +147,7 @@ Archon includes a web dashboard for real-time monitoring. Start it alongside `ar
 bash ui/start.sh --project /path/to/your-lean-project
 ```
 
-The dashboard shows iteration progress, parallel prover status, agent logs with live streaming, and proof journal milestones — all updating in real time.
+The dashboard shows iteration progress, parallel prover status, a file-centric Diffs view backed by recorded code snapshots, agent logs with live streaming, and proof journal milestones — all updating in real time.
 
 <p align="center">
 <img src="docs/dashboard-logs.jpg" alt="Archon Dashboard — Logs view" width="800">
@@ -161,7 +161,7 @@ The **Journal** view tracks proof milestones across sessions — see which theor
 <img src="docs/dashboard-journal.jpg" alt="Archon Dashboard — Journal view" width="800">
 </p>
 
-See [`ui/README.md`](ui/README.md) for more details.
+See [`ui/README.md`](ui/README.md) for more details on Overview / Diffs / Logs / Journal and the supporting API surface.
 
 ### Existing lean4-skills and lean-lsp MCP installations
 

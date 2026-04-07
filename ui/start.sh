@@ -156,7 +156,25 @@ if [[ "$BUILD_ONLY" == true ]]; then
     exit 0
 fi
 
-# ── Port utilities ──────────────────────────────────────────
+# ── Instance + port utilities ──────────────────────────────
+INSTANCE_DIR="$UI_DIR/.archon-ui"
+mkdir -p "$INSTANCE_DIR"
+
+project_key() {
+    local input="$1"
+    if command -v shasum &>/dev/null; then
+        printf '%s' "$input" | shasum -a 256 | awk '{print substr($1,1,16)}'
+        return
+    fi
+    if command -v sha256sum &>/dev/null; then
+        printf '%s' "$input" | sha256sum | awk '{print substr($1,1,16)}'
+        return
+    fi
+    printf '%s' "$input" | cksum | awk '{print $1}'
+}
+
+PROJECT_KEY="$(project_key "$PROJECT_PATH")"
+PID_FILE="$INSTANCE_DIR/${PROJECT_KEY}.pid"
 
 # Check if a port is in LISTEN state.
 # Returns 0 (true) if in use, 1 (false) if free.
@@ -171,90 +189,80 @@ port_in_use() {
         ss -tlnH 2>/dev/null | grep -qE "[:.]${p}\b" && return 0
         return 1
     fi
-    # /proc/net/tcp fallback (Linux containers without lsof/ss)
     if [[ -r /proc/net/tcp ]]; then
         local hex
         hex=$(printf '%04X' "$p")
-        grep -qi ": ${hex} " /proc/net/tcp 2>/dev/null && \
-        grep -q " 0A " /proc/net/tcp 2>/dev/null && return 0  # 0A = LISTEN
-        # More precise: check local_address:port in LISTEN state
         awk '{print $2, $4}' /proc/net/tcp 2>/dev/null | grep -qi ":${hex} 0A" && return 0
         return 1
     fi
-    # No tool available — assume free
     return 1
 }
 
-# Try to free a port. Best-effort, silent failure.
-try_free_port() {
-    local p="$1"
-    if command -v fuser &>/dev/null; then
-        fuser -k "$p/tcp" &>/dev/null || true
-        sleep 1
-        return
+stop_pid() {
+    local pid="$1"
+    local label="$2"
+    if ! kill -0 "$pid" 2>/dev/null; then
+        return 1
     fi
-    if command -v lsof &>/dev/null; then
-        local pids
-        pids=$(lsof -iTCP:"$p" -sTCP:LISTEN -t 2>/dev/null)
-        [[ -n "$pids" ]] && kill $pids 2>/dev/null || true
+
+    info "Stopping ${label} (PID $pid)..."
+    kill "$pid" 2>/dev/null || true
+    for _i in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || return 0
         sleep 1
-        return
-    fi
+    done
+
+    warn "PID $pid did not exit after SIGTERM, forcing stop..."
+    kill -9 "$pid" 2>/dev/null || true
+    for _i in 1 2 3; do
+        kill -0 "$pid" 2>/dev/null || return 0
+        sleep 1
+    done
+    return 0
 }
 
-# ── Check if port is in use ────────────────────────────────
-if port_in_use "$PORT"; then
-    warn "Port $PORT is already in use"
-    # Try to find a free port
-    found_free=false
-    for p in $(seq $((PORT + 1)) $((PORT + 10))); do
+find_next_free_port() {
+    local base="$1"
+    local p
+    for p in $(seq $((base + 1)) $((base + 10))); do
         if ! port_in_use "$p"; then
-            PORT="$p"
-            found_free=true
-            echo ""
-            warn "╔══════════════════════════════════════════════════╗"
-            warn "║  Port changed! Using ${PORT} instead              ║"
-            warn "╚══════════════════════════════════════════════════╝"
-            echo ""
-            break
+            echo "$p"
+            return 0
         fi
     done
-    if [[ "$found_free" != true ]]; then
-        err "Could not find a free port in range $((PORT))–$((PORT + 10))"
-        exit 1
-    fi
-fi
+    return 1
+}
 
-# ── Start server ───────────────────────────────────────────
-SERVER_DIR="$UI_DIR/server"
-PID_FILE="$UI_DIR/.archon-ui.pid"
-
-# Clean up old PID
+# Clean up current project's previous instance before checking ports.
 if [[ -f "$PID_FILE" ]]; then
     old_pid=$(cat "$PID_FILE")
-    if kill -0 "$old_pid" 2>/dev/null; then
-        info "Stopping previous UI server (PID $old_pid)..."
-        kill "$old_pid" 2>/dev/null || true
-        # Wait for port release
-        for _i in 1 2 3 4 5; do
-            kill -0 "$old_pid" 2>/dev/null || break
-            sleep 1
-        done
+    if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        stop_pid "$old_pid" "previous UI server for this project"
+    else
+        warn "Removing stale UI instance record for this project"
     fi
     rm -f "$PID_FILE"
 fi
 
-# Post-cleanup: if port is still occupied (orphan process), try to free it
+# Only after project-local cleanup do we resolve external port conflicts.
 if port_in_use "$PORT"; then
-    warn "Port $PORT still occupied after cleanup — attempting to free..."
-    try_free_port "$PORT"
-    if port_in_use "$PORT"; then
-        err "Port $PORT is still in use. Free it manually:"
-        err "  lsof -iTCP:$PORT  or  fuser $PORT/tcp  or  ss -tlnp | grep $PORT"
+    warn "Port $PORT is already in use by another process or project"
+    next_port="$(find_next_free_port "$PORT" || true)"
+    if [[ -z "$next_port" ]]; then
+        err "Could not find a free port in range ${PORT}–$((PORT + 10))"
+        err "Free the current port or pass an explicit --port"
         exit 1
     fi
-    info "  Port $PORT freed ✓"
+    PORT="$next_port"
+    echo ""
+    warn "╔══════════════════════════════════════════════════╗"
+    warn "║  Port changed! Using ${PORT} instead              ║"
+    warn "╚══════════════════════════════════════════════════╝"
+    echo ""
 fi
+
+# ── Start server ───────────────────────────────────────────
+SERVER_DIR="$UI_DIR/server"
 
 echo ""
 if [[ "$DEV_MODE" == true ]]; then
@@ -267,7 +275,7 @@ if [[ "$DEV_MODE" == true ]]; then
     info ""
 
     # Start server in background
-    (cd "$SERVER_DIR" && node --import tsx src/index.ts --project "$PROJECT_PATH" --port "$PORT") &
+    (cd "$SERVER_DIR" && exec node --import tsx src/index.ts --project "$PROJECT_PATH" --port "$PORT") &
     SERVER_PID=$!
     echo "$SERVER_PID" > "$PID_FILE"
 
@@ -275,7 +283,7 @@ if [[ "$DEV_MODE" == true ]]; then
     trap "kill $SERVER_PID 2>/dev/null; rm -f '$PID_FILE'" EXIT
     (cd "$CLIENT_DIR" && node node_modules/vite/bin/vite.js --port 5173)
 else
-    (cd "$SERVER_DIR" && node --import tsx src/index.ts --project "$PROJECT_PATH" --port "$PORT") &
+    (cd "$SERVER_DIR" && exec node --import tsx src/index.ts --project "$PROJECT_PATH" --port "$PORT") &
     SERVER_PID=$!
     echo "$SERVER_PID" > "$PID_FILE"
 

@@ -40,7 +40,7 @@ export function register(fastify: FastifyInstance, paths: ProjectPaths) {
       const dirPath = path.join(logsPath, dir);
       const files: LogFileEntry[] = [];
 
-      for (const f of fs.readdirSync(dirPath).filter(f => f.endsWith('.jsonl') && f !== 'provers-combined.jsonl')) {
+      for (const f of fs.readdirSync(dirPath).filter(f => f.endsWith('.jsonl') && !f.endsWith('.raw.jsonl') && f !== 'provers-combined.jsonl')) {
         const full = path.join(dirPath, f);
         if (!fs.statSync(full).isFile()) continue;
         const role = f.replace('.jsonl', '');
@@ -50,7 +50,7 @@ export function register(fastify: FastifyInstance, paths: ProjectPaths) {
 
       const proversDir = path.join(dirPath, 'provers');
       if (fs.existsSync(proversDir) && fs.statSync(proversDir).isDirectory()) {
-        for (const f of fs.readdirSync(proversDir).filter(f => f.endsWith('.jsonl')).sort()) {
+        for (const f of fs.readdirSync(proversDir).filter(f => f.endsWith('.jsonl') && !f.endsWith('.raw.jsonl')).sort()) {
           const full = path.join(proversDir, f);
           const stat = fs.statSync(full);
           files.push({ name: f, path: `${dir}/provers/${f}`, size: stat.size, modified: stat.mtime.toISOString(), role: 'prover' });

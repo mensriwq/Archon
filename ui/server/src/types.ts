@@ -1,6 +1,6 @@
 export interface LogEntry {
   ts: string;
-  event: 'shell' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'session_end';
+  event: 'shell' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'session_end' | 'code_snapshot';
   level?: 'info' | 'warn' | 'error';
   message?: string;
   content?: string;

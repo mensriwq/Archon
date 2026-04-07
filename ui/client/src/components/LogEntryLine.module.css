@@ -3,6 +3,7 @@
 .ts { color: var(--text-muted); flex-shrink: 0; user-select: none; }
 .event { flex-shrink: 0; min-width: 85px; font-weight: 500; }
 .text { color: var(--text-secondary); word-break: break-word; white-space: pre-wrap; }
+.toolName { font-weight: 700; color: var(--text-primary); }
 .expandable { cursor: pointer; }
 .expandable:hover { color: var(--text-primary); }
 .expandHint { color: var(--text-muted); font-size: 10px; }

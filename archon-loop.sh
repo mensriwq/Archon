@@ -444,7 +444,12 @@ run_parallel_provers() {
         rel=$(relpath "$(echo "$sorry_files" | head -1)" "$PROJECT_PATH")
         info "Only 1 file (${rel}) — running serial prover"
 
-        # Align log path & metadata with parallel branch so dashboard works
+        if [[ "$DRY_RUN" == true ]]; then
+            echo "=== Prover: ${rel} ==="
+            return 0
+        fi
+
+        # -- Snapshot: baseline + env vars for single-file serial prover --
         local file_slug
         file_slug=$(echo "$rel" | sed 's|/|_|g; s|\.lean$||')
         local prover_log="${ITER_DIR}/provers/${file_slug}"
@@ -452,11 +457,21 @@ run_parallel_provers() {
 
         write_meta "$ITER_META" "provers.${file_slug}.file=${rel}" "provers.${file_slug}.status=running"
 
+        local snap_dir="${ITER_DIR}/snapshots/${file_slug}"
+        mkdir -p "$snap_dir"
+        cp "$(echo "$sorry_files" | head -1)" "${snap_dir}/baseline.lean" 2>/dev/null || true
+
+        export ARCHON_SNAPSHOT_DIR="$snap_dir"
+        export ARCHON_PROVER_JSONL="${prover_log}.jsonl"
+        export ARCHON_PROJECT_PATH="$PROJECT_PATH"
+
         if run_claude "$(build_prompt "prover" "$stage")"; then
             write_meta "$ITER_META" "provers.${file_slug}.status=done"
         else
             write_meta "$ITER_META" "provers.${file_slug}.status=error"
         fi
+
+        unset ARCHON_SNAPSHOT_DIR ARCHON_PROVER_JSONL ARCHON_PROJECT_PATH
         return 0
     fi
 
@@ -520,9 +535,17 @@ EOF
 
         write_meta "$ITER_META" "provers.${file_slug}.file=${rel}" "provers.${file_slug}.status=running"
 
-        # Run each prover in a subshell with its own LOG_BASE
+        # -- Snapshot: baseline + env vars for this prover --
+        local snap_dir="${ITER_DIR}/snapshots/${file_slug}"
+        mkdir -p "$snap_dir"
+        cp "$f" "${snap_dir}/baseline.lean" 2>/dev/null || true
+
+        # Run each prover in a subshell with its own LOG_BASE + snapshot env
         (
             LOG_BASE="$prover_log"
+            export ARCHON_SNAPSHOT_DIR="$snap_dir"
+            export ARCHON_PROVER_JSONL="${prover_log}.jsonl"
+            export ARCHON_PROJECT_PATH="$PROJECT_PATH"
             run_claude "$prover_prompt" || true
         ) &
         pids+=($!)
@@ -783,7 +806,28 @@ for (( i=0; i<MAX_ITERATIONS; i++ )); do
         if [[ "$DRY_RUN" == true ]]; then
             echo "$PROVER_PROMPT"
         else
+            # -- Snapshot: baseline for all target files in serial mode --
+            local sorry_files_serial
+            sorry_files_serial=$(parse_objective_files)
+            if [[ -n "$sorry_files_serial" ]]; then
+                while IFS= read -r sf; do
+                    local srel
+                    srel=$(relpath "$sf" "$PROJECT_PATH")
+                    local sslug
+                    sslug=$(echo "$srel" | sed 's|/|_|g; s|\.lean$||')
+                    local ssnap="${ITER_DIR}/snapshots/${sslug}"
+                    mkdir -p "$ssnap"
+                    cp "$sf" "${ssnap}/baseline.lean" 2>/dev/null || true
+                done <<< "$sorry_files_serial"
+            fi
+            # Serial prover edits multiple files — snapshot.py uses file_path to route
+            # We set ARCHON_SNAPSHOT_DIR to the snapshots root; snapshot.py derives the subdir
+            export ARCHON_SNAPSHOT_DIR="${ITER_DIR}/snapshots"
+            export ARCHON_PROVER_JSONL="${ITER_DIR}/prover.jsonl"
+            export ARCHON_PROJECT_PATH="$PROJECT_PATH"
+            export ARCHON_SERIAL_MODE="true"
             run_claude "$PROVER_PROMPT" || true
+            unset ARCHON_SNAPSHOT_DIR ARCHON_PROVER_JSONL ARCHON_PROJECT_PATH ARCHON_SERIAL_MODE
         fi
     fi
 

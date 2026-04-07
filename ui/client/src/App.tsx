@@ -3,6 +3,7 @@ import { useProject } from './hooks/useApi';
 import Overview from './views/Overview';
 import LogViewer from './views/LogViewer';
 import Journal from './views/Journal';
+import DiffPlayback from './views/DiffPlayback';
 
 function ConnectionBanner({ isError }: { isError: boolean }) {
   if (!isError) return null;
@@ -29,6 +30,7 @@ export default function App() {
         <nav className="header-nav">
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>Overview</NavLink>
           <NavLink to="/logs" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Logs</NavLink>
+          <NavLink to="/diffs" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Diffs</NavLink>
           <NavLink to="/journal" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Journal</NavLink>
         </nav>
       </header>
@@ -36,6 +38,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/logs" element={<LogViewer />} />
+          <Route path="/diffs" element={<DiffPlayback />} />
           <Route path="/journal" element={<Journal />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

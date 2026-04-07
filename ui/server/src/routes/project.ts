@@ -4,6 +4,7 @@ import path from 'path';
 import type { FastifyInstance } from 'fastify';
 import type { ProgressData, Task } from '../types.js';
 import { readFileOr } from '../utils.js';
+import { countSorriesInProject } from '../utils/sorryCount.js';
 
 export interface ProjectPaths {
   projectPath: string;
@@ -40,36 +41,16 @@ function parseTasksMarkdown(content: string, status: 'pending' | 'done'): Task[]
   let currentFile = '';
   for (const line of content.split('\n')) {
     const fileMatch = line.match(/^## (.+\.lean)/);
-    if (fileMatch) { currentFile = fileMatch[1].trim(); continue; }
+    if (fileMatch) {
+      currentFile = fileMatch[1].trim();
+      continue;
+    }
     const thMatch = line.match(/^### (.+)/);
     if (thMatch) {
       tasks.push({ id: '', theorem: thMatch[1].trim(), file: currentFile, status, proofSketch: '' });
     }
   }
   return tasks.map((t, i) => ({ ...t, id: `task-${status}-${i}` }));
-}
-
-function countSorries(projectPath: string): { file: string; count: number; lines: number[] }[] {
-  const results: { file: string; count: number; lines: number[] }[] = [];
-  function walk(d: string) {
-    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-      const full = path.join(d, entry.name);
-      if (entry.isDirectory() && !['_lake', '.lake', '.archon', 'node_modules'].includes(entry.name)) walk(full);
-      else if (entry.isFile() && entry.name.endsWith('.lean')) {
-        const content = fs.readFileSync(full, 'utf-8');
-        const fileLines = content.split('\n');
-        const sorryLines: number[] = [];
-        fileLines.forEach((line, idx) => {
-          if (/\bsorry\b/.test(line) && !line.trimStart().startsWith('--')) sorryLines.push(idx + 1);
-        });
-        if (sorryLines.length > 0) {
-          results.push({ file: path.relative(projectPath, full), count: sorryLines.length, lines: sorryLines });
-        }
-      }
-    }
-  }
-  try { walk(projectPath); } catch { /* ignore permission errors */ }
-  return results;
 }
 
 export function register(fastify: FastifyInstance, paths: ProjectPaths) {
@@ -94,15 +75,14 @@ export function register(fastify: FastifyInstance, paths: ProjectPaths) {
   });
 
   fastify.get('/api/sorry-count', async () => {
-    const files = countSorries(projectPath);
-    const total = files.reduce((s, f) => s + f.count, 0);
-    return { total, files };
+    return countSorriesInProject(projectPath);
   });
 
   fastify.get('/api/task-results', async () => {
     if (!fs.existsSync(taskResultsPath)) return [];
     return fs.readdirSync(taskResultsPath).filter(f => f.endsWith('.md')).map(f => ({
-      name: f, content: fs.readFileSync(path.join(taskResultsPath, f), 'utf-8'),
+      name: f,
+      content: fs.readFileSync(path.join(taskResultsPath, f), 'utf-8'),
     }));
   });
 }
