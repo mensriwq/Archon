@@ -157,8 +157,38 @@ def main():
     p.add_argument("--think", action="store_true")
     args = p.parse_args()
 
-    model = args.model or DEFAULTS[args.provider]
-    fn = {"gemini": call_gemini, "openai": call_openai, "openrouter": call_openrouter}[args.provider]
+    provider = args.provider
+    user_model = args.model
+
+    # 1. Step 1: Fix provider based on API Key format
+    # Only check if keys are set to avoid premature exit in _require_key
+    env_map = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "openrouter": "OPENROUTER_API_KEY"}
+    current_key = os.environ.get(env_map.get(provider, ""), "")
+
+    if provider == "openai" and current_key.startswith("AIza"):
+        sys.stderr.write(f"Warning: Provider '{provider}' mismatch with API Key format (AIza...). Switching to 'gemini'.\n")
+        provider = "gemini"
+    elif provider == "gemini" and current_key.startswith("sk-"):
+        sys.stderr.write(f"Warning: Provider '{provider}' mismatch with API Key format (sk-...). Switching to 'openai'.\n")
+        provider = "openai"
+
+    # 2. Step 2: Fix model based on finalized provider
+    model = user_model
+    if not model:
+        model = DEFAULTS[provider]
+    else:
+        # Check for absolute mismatches in model names
+        is_openai_model = any(x in model.lower() for x in ["gpt-", "o1-", "o3-"])
+        is_gemini_model = "gemini" in model.lower()
+
+        if provider == "openai" and is_gemini_model:
+            sys.stderr.write(f"Warning: Model '{model}' mismatch with provider 'openai'. Falling back to default '{DEFAULTS[provider]}'.\n")
+            model = DEFAULTS[provider]
+        elif provider == "gemini" and is_openai_model:
+            sys.stderr.write(f"Warning: Model '{model}' mismatch with provider 'gemini'. Falling back to default '{DEFAULTS[provider]}'.\n")
+            model = DEFAULTS[provider]
+
+    fn = {"gemini": call_gemini, "openai": call_openai, "openrouter": call_openrouter}[provider]
     print(fn(args.prompt, model, args.think))
 
 

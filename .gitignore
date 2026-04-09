@@ -18,3 +18,13 @@ ui/.archon-ui.pid
 
 # Test files
 sample-log.jsonl
+
+# Configs
+litellm_config.yaml
+
+# Logs & Data
+*.log
+last_error_payload.json
+
+
+*venv/

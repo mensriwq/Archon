@@ -127,7 +127,14 @@ read_stage() {
         exit 1
     fi
     local stage
-    stage=$(awk '/^## Current Stage/{getline; gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print; exit}' "$PROGRESS_FILE")
+    stage=$(awk '
+        /^## Current Stage/ {
+            while(getline) {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "");
+                if ($0 != "") { print; exit }
+            }
+        }
+    ' "$PROGRESS_FILE")
     if [[ -z "$stage" ]]; then
         err "Could not read current stage from PROGRESS.md"
         exit 1
@@ -176,8 +183,7 @@ parse_objective_files() {
         found && /^## /          { exit }
         found                    { print }
     ' "$PROGRESS_FILE" \
-        | grep -oE '(\*\*|`)[^*`]+\.lean(\*\*|`)' \
-        | sed 's/\*\*//g; s/`//g' \
+        | grep -oE '[a-zA-Z0-9_/-]+\.lean' \
         | while IFS= read -r f; do
             local found
             found=$(find "${PROJECT_PATH}" -path "*/$f" -not -path '*/.lake/*' -not -path '*/lake-packages/*' 2>/dev/null | head -1)
