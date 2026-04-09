@@ -1,0 +1,28 @@
+{
+  "id": "Ko_YaY62JNWa_uMPx7qu4Qo",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-4-6",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 13745,
+    "output_tokens": 36,
+    "cache_read_input_tokens": 8144,
+    "total_tokens": 13781
+  },
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_66ef88569e074b3b80bd",
+      "name": "Write",
+      "input": {
+        "content": "Hello world",
+        "file_path": "Hello.md"
+      },
+      "provider_specific_fields": {
+        "signature": "EjQKMgG+Pvb7UeSkNhbDPvxKad0vIsvYKI77Yiq/OfQ4A8hsqVt1dE4XolUInWC49oLWU+Fe"
+      }
+    }
+  ],
+  "stop_reason": "tool_use"
+}
