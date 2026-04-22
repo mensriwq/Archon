@@ -102,11 +102,11 @@ def get_backend_url():
 backend_url, is_litellm_mode = get_backend_url()
 
 try:
-    from interceptor_logic import InterceptorLogic
+    from interceptor_logic import ToolUIDInterceptor, ResponseInterceptor
 except ImportError:
-    from scripts.interceptor_logic import InterceptorLogic
+    from scripts.interceptor_logic import ToolUIDInterceptor, ResponseInterceptor
 
-interceptor = InterceptorLogic()
+interceptor = ToolUIDInterceptor()
 
 # ==============================================================================
 # State Management
@@ -225,7 +225,7 @@ async def api_commit(request: Request):
         return {"error": "Missing req_id or response"}
         
     # Apply validation interception to human commits too
-    response_data = interceptor.intercept_and_validate_response(response_data)
+    response_data = ResponseInterceptor.intercept_response(response_data)
         
     async with session.lock:
         req_data = session.pending_requests.get(req_id)
@@ -541,7 +541,7 @@ async def _internal_forward(req_id: str, apply_interception: bool = True):
 
             # Apply validation interception if requested
             if apply_interception:
-                data = interceptor.intercept_and_validate_response(data)
+                data = ResponseInterceptor.intercept_response(data)
 
             return {"response": data}
             
